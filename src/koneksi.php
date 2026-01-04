@@ -1,9 +1,9 @@
 <?php
 date_default_timezone_set('Asia/Jakarta');
 
-$servername = "mysql"; 
+$servername = "localhost";
 $username = "root";
-$password = "root"; 
+$password = "masukbang";
 $db = "webdailymyjurnal";
 
 $conn = new mysqli($servername, $username, $password, $db);
