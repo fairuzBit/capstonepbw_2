@@ -7,9 +7,9 @@
  */
 
 // Konfigurasi API
-define('GEMINI_API_KEY', 'AIzaSyCTqB4vCeEaIgRadoM6IfPEKvliK6ggPPY');
+define('GEMINI_API_KEY', 'AIzaSyD0lJ1qIKU1Kl3fq1owx9Wn23QMbqrnWZQ');
 // KODE BARU
-define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent');
+define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent');
 
 
 /**
