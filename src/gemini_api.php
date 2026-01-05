@@ -5,11 +5,16 @@
  * PENTING: Ganti YOUR_API_KEY_HERE dengan API key dari Google AI Studio
  * Dapatkan di: https://makersuite.google.com/app/apikey
  */
-
+if (file_exists(__DIR__ . '/secrets.php')) {
+    include __DIR__ . '/secrets.php';
+} else {
+    // Fallback kalau file tidak ada (misal di server lain), definisikan kosong/error
+    define('GEMINI_API_KEY_SECURE', '');
+}
 // Konfigurasi API
-define('GEMINI_API_KEY', 'AIzaSyCTqB4vCeEaIgRadoM6IfPEKvliK6ggPPY');
+define('GEMINI_API_KEY', GEMINI_API_KEY_SECURE);
 // KODE BARU
-define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent');
+define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent');
 
 
 /**
@@ -19,11 +24,11 @@ define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/model
  * @return array Array of tags atau error message
  */
 function generateTagsWithGemini($text) {
-    // Validasi API key
-    if (GEMINI_API_KEY === 'YOUR_API_KEY_HERE') {
+    // Validasi kalau key kosong
+    if (empty(GEMINI_API_KEY) || GEMINI_API_KEY === 'MASUKKAN_KEY_BARU_YANG_AMAN_DISINI') {
         return [
             'success' => false,
-            'error' => 'API key belum dikonfigurasi. Edit file gemini_api.php dan masukkan API key Anda.'
+            'error' => 'API Key belum disetting di src/secrets.php!'
         ];
     }
 
