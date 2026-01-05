@@ -1,0 +1,7 @@
+# Abaikan file rahasia
+src/secrets.php
+
+# Abaikan file sistem/sampah lainnya (opsional tapi bagus)
+.DS_Store
+Thumbs.db
+vendor/
