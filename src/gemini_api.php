@@ -7,8 +7,10 @@
  */
 
 // Konfigurasi API
-define('GEMINI_API_KEY', 'YOUR_API_KEY_HERE'); // <-- GANTI DENGAN API KEY ANDA
-define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent');
+define('GEMINI_API_KEY', 'AIzaSyCTqB4vCeEaIgRadoM6IfPEKvliK6ggPPY');
+// KODE BARU
+define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent');
+
 
 /**
  * Generate tags dari teks menggunakan Gemini AI
