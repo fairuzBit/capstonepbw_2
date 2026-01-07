@@ -325,6 +325,20 @@ include "koneksi.php";
               <p class="card-text">
                 <?= $row["isi"]?>
               </p>
+              <?php
+              // Display tags if available
+              if (!empty($row["tags"])) {
+                  echo '<div class="mt-2">';
+                  $tags = explode(',', $row["tags"]);
+                  foreach ($tags as $tag) {
+                      $tag = trim($tag);
+                      if (!empty($tag)) {
+                          echo '<span class="badge bg-primary me-1 mb-1">' . htmlspecialchars($tag) . '</span>';
+                      }
+                  }
+                  echo '</div>';
+              }
+              ?>
             </div>
             <div class="card-footer">
               <small class="text-body-secondary">
