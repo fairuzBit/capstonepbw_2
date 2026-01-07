@@ -1,3 +1,97 @@
+<?php
+session_start(); // Start session at the very beginning
+
+// Handle delete article request
+if (isset($_POST['hapus'])) {
+    include "koneksi.php";
+    
+    $id = $_POST['id'];
+    $gambar = $_POST['gambar'];
+
+    // Delete image file if exists
+    if ($gambar != '' && file_exists('img/' . $gambar)) {
+        unlink('img/' . $gambar);
+    }
+
+    // Delete article from database
+    $stmt = $conn->prepare("DELETE FROM article WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $hapus = $stmt->execute();
+
+    $stmt->close();
+    $conn->close();
+    
+    if ($hapus) {
+        // Use top-level window redirect for AJAX-loaded content
+        echo "<script>
+            alert('Hapus data sukses');
+            window.top.location.href = 'admin.php?page=article';
+        </script>";
+    } else {
+        echo "<script>
+            alert('Hapus data gagal');
+            window.top.location.href = 'admin.php?page=article';
+        </script>";
+    }
+    exit;
+} // CLOSING BRACE YANG HILANG - INI PENYEBAB ERROR!
+
+// Handle edit article request
+if (isset($_POST['simpan'])) {
+    include "koneksi.php";
+    include "upload_foto.php";
+    
+    $judul = $_POST['judul'];
+    $isi = $_POST['isi'];
+    $tanggal = date("Y-m-d H:i:s");
+    $username = $_SESSION['username'] ?? 'admin';
+    $gambar = '';
+    $tags = isset($_POST['tags']) ? trim($_POST['tags']) : '';
+    $nama_gambar = $_FILES['gambar']['name'];
+    $id = $_POST['id'];
+
+    // Handle image upload
+    if ($nama_gambar != '') {
+        $cek_upload = upload_foto($_FILES["gambar"]);
+        if ($cek_upload['status']) {
+            $gambar = $cek_upload['message'];
+            // Delete old image
+            if (!empty($_POST['gambar_lama']) && file_exists('img/' . $_POST['gambar_lama'])) {
+                unlink('img/' . $_POST['gambar_lama']);
+            }
+        } else {
+            echo "<script>
+                alert('" . $cek_upload['message'] . "');
+                window.top.location.href = 'admin.php?page=article';
+            </script>";
+            exit;
+        }
+    } else {
+        $gambar = $_POST['gambar_lama'];
+    }
+
+    // Update article
+    $stmt = $conn->prepare("UPDATE article SET judul=?, isi=?, gambar=?, tanggal=?, username=?, tags=? WHERE id=?");
+    $stmt->bind_param("ssssssi", $judul, $isi, $gambar, $tanggal, $username, $tags, $id);
+    $simpan = $stmt->execute();
+
+    $stmt->close();
+    $conn->close();
+    
+    if ($simpan) {
+        echo "<script>
+            alert('Update data sukses');
+            window.top.location.href = 'admin.php?page=article';
+        </script>";
+    } else {
+        echo "<script>
+            alert('Update data gagal');
+            window.top.location.href = 'admin.php?page=article';
+        </script>";
+    }
+    exit;
+}
+?>
  <table class="table table-hover">
                 <thead class="table-dark">
                     <tr>
@@ -133,7 +227,7 @@ $hasil = $conn->query($sql);
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <input type="submit" value="simpan" name="simpan" class="btn btn-primary">
+                    <button type="button" class="btn btn-primary" onclick="saveEditArticle(<?= $row['id'] ?>)">Simpan</button>
                 </div>
             </form>
         </div>
@@ -149,19 +243,13 @@ $hasil = $conn->query($sql);
                 <h1 class="modal-title fs-5" id="staticBackdropLabel">Konfirmasi Hapus Article</h1>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="post" action="" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="formGroupExampleInput" class="form-label">Yakin akan menghapus artikel "<strong><?= $row["judul"] ?></strong>"?</label>
-                        <input type="hidden" name="id" value="<?= $row["id"] ?>">
-                        <input type="hidden" name="gambar" value="<?= $row["gambar"] ?>">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">batal</button>
-                    <input type="submit" value="hapus" name="hapus" class="btn btn-primary">
-                </div>
-            </form>
+            <div class="modal-body">
+                <p>Yakin akan menghapus artikel "<strong><?= $row["judul"] ?></strong>"?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-danger" onclick="deleteArticle(<?= $row['id'] ?>, '<?= addslashes($row['gambar']) ?>')">Hapus</button>
+            </div>
         </div>
     </div>
 </div>
@@ -263,12 +351,26 @@ function generateTagsEdit(id) {
         
         if (data.success && data.tags) {
             if (!editTags[id]) editTags[id] = [];
+            
             data.tags.forEach(tag => {
                 tag = tag.trim().toLowerCase();
-                if (tag && !editTags[id].includes(tag)) {
+                
+                // Skip if tag already exists
+                if (editTags[id].includes(tag)) {
+                    return;
+                }
+                
+                // ⚠️ PERBAIKAN: Batasi maksimal 3 tag
+                // Jika sudah ada 3 tag, hapus tag paling lama (index 0)
+                if (editTags[id].length >= 3) {
+                    editTags[id].shift(); // Hapus tag pertama (paling lama)
+                }
+                
+                if (tag) {
                     editTags[id].push(tag);
                 }
             });
+            
             renderTagsEdit(id);
             updateTagsInputEdit(id);
         } else {
@@ -325,12 +427,82 @@ function addManualTagEdit(id) {
     const tag = input.value.trim().toLowerCase();
     if (tag) {
         if (!editTags[id]) editTags[id] = [];
-        if (!editTags[id].includes(tag)) {
-            editTags[id].push(tag);
-            renderTagsEdit(id);
-            updateTagsInputEdit(id);
+        
+        // Check if tag already exists
+        if (editTags[id].includes(tag)) {
+            input.value = '';
+            return;
         }
+        
+        // ⚠️ PERBAIKAN: Batasi maksimal 3 tag
+        if (editTags[id].length >= 3) {
+            
+            input.value = '';
+            return;
+        }
+        
+        editTags[id].push(tag);
+        renderTagsEdit(id);
+        updateTagsInputEdit(id);
         input.value = '';
     }
+}
+
+// Function to delete article via AJAX
+function deleteArticle(id, gambar) {
+    // Create form data
+    var formData = new FormData();
+    formData.append('hapus', 'hapus');
+    formData.append('id', id);
+    formData.append('gambar', gambar);
+    
+    // Send AJAX request
+    fetch('article_data.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(data => {
+        // Close modal
+        var modal = bootstrap.Modal.getInstance(document.getElementById('modalHapus' + id));
+        if (modal) modal.hide();
+        
+        // Reload parent page
+        window.top.location.href = 'admin.php?page=article';
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+
+// Function to save/update article via AJAX
+function saveEditArticle(id) {
+    // Get form element
+    var form = document.querySelector('#modalEdit' + id + ' form');
+    
+    // Create FormData from the form (handles file uploads automatically)
+    var formData = new FormData(form);
+    
+    // Make sure we add the 'simpan' parameter
+    formData.append('simpan', 'simpan');
+    
+    // Send AJAX request
+    fetch('article_data.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(data => {
+        // Close modal
+        var modal = bootstrap.Modal.getInstance(document.getElementById('modalEdit' + id));
+        if (modal) modal.hide();
+        
+        // Show success message and reload
+        alert('Update data sukses');
+        window.top.location.href = 'admin.php?page=article';
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
 }
 </script>

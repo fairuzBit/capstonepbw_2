@@ -232,10 +232,29 @@ function generateTags(modalId) {
         loading.classList.add('d-none');
         
         if (data.success && data.tags) {
-            // Add generated tags
+            // Add generated tags - limit to max 3 tags total
+            // First, check if adding new tags would exceed limit
+            if (!currentTags[modalId]) currentTags[modalId] = [];
+            
             data.tags.forEach(tag => {
-                addTag(modalId, tag);
+                tag = tag.trim().toLowerCase();
+                
+                // Skip if tag already exists
+                if (currentTags[modalId].includes(tag)) {
+                    return;
+                }
+                
+                // ⚠️ PERBAIKAN: Batasi maksimal 3 tag
+                // Jika sudah ada 3 tag, hapus tag paling lama (index 0)
+                if (currentTags[modalId].length >= 3) {
+                    currentTags[modalId].shift(); // Hapus tag pertama (paling lama)
+                }
+                
+                currentTags[modalId].push(tag);
             });
+            
+            renderTags(modalId);
+            updateTagsInput(modalId);
         } else {
             alert('Error: ' + (data.error || 'Gagal generate tag'));
         }
@@ -257,6 +276,13 @@ function addTag(modalId, tagText) {
     
     // Check if tag already exists
     if (currentTags[modalId].includes(tagText.toLowerCase())) {
+        return;
+    }
+    
+    // ⚠️ PERBAIKAN: Batasi maksimal 3 tag
+    // Jika sudah ada 3 tag, tampilkan peringatan
+    if (currentTags[modalId].length >= 3) {
+        alert('Maksimal 3 tag saja! Hapus tag yang ada terlebih dahulu untuk menambah tag baru.');
         return;
     }
     
