@@ -41,6 +41,10 @@ if (isset($_POST['simpan'])) {
     include "koneksi.php";
     include "upload_foto.php";
     
+    // DEBUG LOGGING
+    file_put_contents('debug.log', date('Y-m-d H:i:s') . " - POST Data: " . print_r($_POST, true) . "\n", FILE_APPEND);
+    file_put_contents('debug.log', date('Y-m-d H:i:s') . " - FILES Data: " . print_r($_FILES, true) . "\n", FILE_APPEND);
+
     $judul = $_POST['judul'];
     $isi = $_POST['isi'];
     $tanggal = date("Y-m-d H:i:s");
