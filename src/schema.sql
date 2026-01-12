@@ -1,0 +1,23 @@
+CREATE DATABASE IF NOT EXISTS webdailymyjurnal;
+USE webdailymyjurnal;
+
+CREATE TABLE IF NOT EXISTS user (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    foto VARCHAR(255) DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS article (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    judul VARCHAR(255) NOT NULL,
+    isi TEXT NOT NULL,
+    gambar VARCHAR(255),
+    tanggal DATETIME NOT NULL,
+    username VARCHAR(50) NOT NULL,
+    tags TEXT
+);
+
+-- Default user: admin / 123123 (MD5: 4297f44b13955235245b2497399d7a93)
+-- MD5 for 123123 is 4297f44b13955235245b2497399d7a93
+INSERT INTO user (username, password) VALUES ('admin', '4297f44b13955235245b2497399d7a93');

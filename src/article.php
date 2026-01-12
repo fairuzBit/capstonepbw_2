@@ -356,4 +356,227 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// ==========================================
+// EDIT MODAL LOGIC (Moved from article_data.php)
+// ==========================================
+
+// Edit modal tag management
+let editTags = {};
+
+// Initialize tags from existing values when modal opens
+// We use a delegated event listener because modals might be dynamically loaded
+document.addEventListener('shown.bs.modal', function(event) {
+    const modal = event.target;
+    if (modal.id && modal.id.startsWith('modalEdit')) {
+        const id = modal.id.replace('modalEdit', '');
+        const tagsInput = document.getElementById('tagsInputEdit' + id);
+        
+        // Reset/Initialize tags for this specific modal
+        if (tagsInput && tagsInput.value) {
+            // Split by comma and clean up
+            editTags[id] = tagsInput.value.split(',').map(t => t.trim().toLowerCase()).filter(t => t);
+        } else {
+            editTags[id] = [];
+        }
+        
+        // Render initial tags
+        renderTagsEdit(id);
+    }
+});
+
+function generateTagsEdit(id) {
+    const judul = document.getElementById('judul_edit' + id)?.value || '';
+    const isi = document.getElementById('isi_edit' + id)?.value || '';
+    const text = judul + ' ' + isi;
+    
+    if (text.trim().length < 10) {
+        alert('Silakan isi judul dan isi artikel terlebih dahulu (minimal 10 karakter)');
+        return;
+    }
+    
+    const btn = document.getElementById('btnGenerateTagEdit' + id);
+    const loading = document.getElementById('loadingTagEdit' + id);
+    
+    if(btn) btn.disabled = true;
+    if(loading) loading.classList.remove('d-none');
+    
+    fetch('generate_tags.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: text })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(btn) btn.disabled = false;
+        if(loading) loading.classList.add('d-none');
+        
+        if (data.success && data.tags) {
+            if (!editTags[id]) editTags[id] = [];
+            
+            data.tags.forEach(tag => {
+                tag = tag.trim().toLowerCase();
+                
+                // Skip if tag already exists
+                if (editTags[id].includes(tag)) {
+                    return;
+                }
+                
+                // Batasi maksimal 3 tag
+                if (editTags[id].length >= 3) {
+                    editTags[id].shift(); // Hapus tag pertama (paling lama)
+                }
+                
+                if (tag) {
+                    editTags[id].push(tag);
+                }
+            });
+            
+            renderTagsEdit(id);
+            updateTagsInputEdit(id);
+        } else {
+            alert('Error: ' + (data.error || 'Gagal generate tag'));
+        }
+    })
+    .catch(error => {
+        if(btn) btn.disabled = false;
+        if(loading) loading.classList.add('d-none');
+        alert('Error: ' + error.message);
+    });
+}
+
+function removeTagEdit(id, tagText) {
+    if (!editTags[id]) editTags[id] = [];
+    editTags[id] = editTags[id].filter(t => t !== tagText.toLowerCase());
+    renderTagsEdit(id);
+    updateTagsInputEdit(id);
+}
+
+function renderTagsEdit(id) {
+    const container = document.getElementById('tagsContainerEdit' + id);
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (!editTags[id]) return;
+    
+    editTags[id].forEach(tag => {
+        const chip = document.createElement('span');
+        chip.className = 'badge bg-primary d-flex align-items-center gap-1';
+        chip.innerHTML = `
+            ${tag}
+            <button type="button" class="btn-close btn-close-white ms-1" 
+                    style="font-size: 0.6rem;" 
+                    onclick="removeTagEdit(${id}, '${tag}')">
+            </button>
+        `;
+        container.appendChild(chip);
+    });
+}
+
+function updateTagsInputEdit(id) {
+    const input = document.getElementById('tagsInputEdit' + id);
+    if (!input) return;
+    
+    input.value = (editTags[id] || []).join(', ');
+}
+
+function addManualTagEdit(id) {
+    const input = document.getElementById('manualTagEdit' + id);
+    if (!input) return;
+    
+    const tag = input.value.trim().toLowerCase();
+    if (tag) {
+        if (!editTags[id]) editTags[id] = [];
+        
+        // Check if tag already exists
+        if (editTags[id].includes(tag)) {
+            input.value = '';
+            return;
+        }
+        
+        // Batasi maksimal 3 tag
+        if (editTags[id].length >= 3) {
+            alert('Maksimal 3 tag saja!');
+            input.value = '';
+            return;
+        }
+        
+        editTags[id].push(tag);
+        renderTagsEdit(id);
+        updateTagsInputEdit(id);
+        input.value = '';
+    }
+}
+
+// Function to delete article via AJAX
+function deleteArticle(id, gambar) {
+    if(!confirm('Yakin ingin menghapus data ini?')) return;
+
+    // Create form data
+    var formData = new FormData();
+    formData.append('hapus', 'hapus');
+    formData.append('id', id);
+    formData.append('gambar', gambar);
+    
+    // Send AJAX request
+    fetch('article_data.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(data => {
+        // Close modal if open (bootstrap 5)
+        const modalElement = document.getElementById('modalHapus' + id);
+        if(modalElement) {
+             const modal = bootstrap.Modal.getInstance(modalElement);
+             if (modal) modal.hide();
+        }
+        
+        // Reload parent page to refresh list
+        // Or re-call load_data() if you want SPA feel, but reload is safer for sync
+        window.location.reload();
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+
+// Function to save/update article via AJAX
+function saveEditArticle(id) {
+    // Get form element
+    var form = document.querySelector('#modalEdit' + id + ' form');
+    if(!form) return;
+    
+    // Create FormData from the form (handles file uploads automatically)
+    var formData = new FormData(form);
+    
+    // Make sure we add the 'simpan' parameter
+    formData.append('simpan', 'simpan');
+    
+    // Send AJAX request
+    fetch('article_data.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(data => {
+        // Close modal
+         const modalElement = document.getElementById('modalEdit' + id);
+        if(modalElement) {
+             const modal = bootstrap.Modal.getInstance(modalElement);
+             if (modal) modal.hide();
+        }
+        
+        // Show success message and reload
+        alert('Update data sukses');
+        window.location.reload();
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+
 </script>
