@@ -170,7 +170,7 @@ Tag:";
     // array_slice($tags, 0, 3) => ambil maksimal 3 tag pertama saja
     // Jadi meskipun Gemini generate lebih dari 3 tag, kita hanya ambil 3 saja
     // Untuk mengubah jumlah tag, ganti angka 3 dengan angka lain (misal: 5 untuk 5 tag)
-    $tags = array_slice($tags, 0, 3);
+    $tags = array_slice($tags, 0 , 3);
 
     // STEP 9: Return hasil success dengan array tags
     return [
